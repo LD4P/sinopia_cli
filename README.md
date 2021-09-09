@@ -59,7 +59,9 @@ $ exe/sinopia-cli resource delete --uri=https://api.development.sinopia.io/resou
 Deleted https://api.development.sinopia.io/resource/e9a4c64a-0202-4d8b-a5ea-6785f15b2164
 ```
 
-Note the ability to delete from URIs listed in a file (`--file`).
+Note:
+* URIs listed in a file can be deleted with `--file`.
+* URIs for resources that do not exist are skipped.
 
 ## Authentication
 Some methods (e.g., resource delete) require a JWT token. See [these instructions](https://github.com/LD4P/sinopia_api/blob/main/README.md#get-a-jwt) for obtaining a token.

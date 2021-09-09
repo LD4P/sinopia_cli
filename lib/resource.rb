@@ -67,8 +67,12 @@ class Resource < Thor
   def delete_resource(uri)
     token = options[:token] || File.read('.cognitoToken')
     resp = connection(token: token).delete uri
-    raise "Error deleting #{url}." unless resp.success?
-
-    puts "Deleted #{uri}"
+    if resp.success?
+      puts "Deleted #{uri}"
+    elsif resp.status == 404
+      puts "Skipped #{uri}"
+    else
+      raise "Error deleting #{uri}: #{resp.status}"
+    end
   end
 end
