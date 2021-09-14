@@ -35,8 +35,8 @@ class Resource < Thor
   def delete
     raise 'Must provide a URI or file' unless options.key?(:uri) || options.key?(:file)
 
-    uris = options.key?(:uri) ? options[:uri] : File.readlines(options[:file])
-    uris.each { |uri| delete_resource(uri) }
+    uris = options.key?(:uri) ? options[:uri] : File.readlines(options[:file], chomp: true)
+    uris.each_with_index { |uri, index| delete_resource(uri, index, uris.size) }
   end
 
   private
@@ -57,20 +57,20 @@ class Resource < Thor
   def put_page(resp_json, uri_only)
     resp_json['data'].each do |resource|
       if uri_only
-        puts resource['uri']
+        puts "#{resource['uri']}: (#{index +1} of #{count})"
       else
         puts JSON.pretty_generate(resource)
       end
     end
   end
 
-  def delete_resource(uri)
+  def delete_resource(uri, index, count)
     token = options[:token] || File.read('.cognitoToken')
     resp = connection(token: token).delete uri
     if resp.success?
-      puts "Deleted #{uri}"
+      puts "Deleted #{uri} (#{index+1} of #{count})"
     elsif resp.status == 404
-      puts "Skipped #{uri}"
+      puts "Skipped #{uri} (#{index+1} of #{count})"
     else
       raise "Error deleting #{uri}: #{resp.status}"
     end
