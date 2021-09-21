@@ -63,6 +63,31 @@ Note:
 * URIs listed in a file can be deleted with `--file`.
 * URIs for resources that do not exist are skipped.
 
+### Copy resources
+```
+$ exe/sinopia-cli resource help copy
+Usage:
+  sinopia-cli resource copy
+
+Options:
+  [--uri=one two three]  # Space separated list of source URIs.
+  [--file=FILE]          # File containing list of source URIs.
+  [--token=TOKEN]        # JWT token. Otherwise, read from .cognitoToken
+  [--api-url=API_URL]
+                         # Default: https://api.stage.sinopia.io
+
+copy resources from one Sinopia environment to another
+```
+
+For example:
+```
+$ exe/sinopia-cli resource copy --uri=https://api.development.sinopia.io/resource/ld4p:RT:bf2:DistributionInformation --api_url=http://localhost:3000
+Copied https://api.development.sinopia.io/resource/ld4p:RT:bf2:DistributionInformation to http://localhost:3000/resource/ld4p:RT:bf2:DistributionInformation (1 of 1)
+```
+
+Note:
+* URIs listed in a file can be deleted with `--file`.
+
 ## Authentication
 Some methods (e.g., resource delete) require a JWT token. See [these instructions](https://github.com/LD4P/sinopia_api/blob/main/README.md#get-a-jwt) for obtaining a token.
 

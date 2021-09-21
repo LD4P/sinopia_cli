@@ -39,10 +39,25 @@ class Resource < Thor
     uris.each_with_index { |uri, index| delete_resource(uri, index, uris.size) }
   end
 
+  option :uri, type: :array, desc: 'Space separated list of source URIs.'
+  option :file, type: :string, desc: 'File containing list of source URIs.'
+  option :token, type: :string, desc: 'JWT token. Otherwise, read from .cognitoToken'
+  desc 'copy', 'copy resources from one Sinopia environment to another'
+  def copy
+    raise 'Must provide a URI or file' unless options.key?(:uri) || options.key?(:file)
+
+    source_uris = options.key?(:uri) ? options[:uri] : File.readlines(options[:file], chomp: true)
+    source_uris.each_with_index { |source_uri, index| copy_resource(source_uri, index, source_uris.size) }
+  end
+
   private
 
-  def connection(token: nil)
-    @connection ||= Client.connection(token: token)
+  def connection
+    @connection ||= Client.connection
+  end
+
+  def connection_with_token
+    @connection_with_token ||= Client.connection(token: token)
   end
 
   def list_page(url, uri_only, params = {})
@@ -57,7 +72,7 @@ class Resource < Thor
   def put_page(resp_json, uri_only)
     resp_json['data'].each do |resource|
       if uri_only
-        puts "#{resource['uri']}: (#{index +1} of #{count})"
+        puts "#{resource['uri']}: (#{index(+1)} of #{count})"
       else
         puts JSON.pretty_generate(resource)
       end
@@ -65,14 +80,37 @@ class Resource < Thor
   end
 
   def delete_resource(uri, index, count)
-    token = options[:token] || File.read('.cognitoToken')
-    resp = connection(token: token).delete uri
+    resp = connection_with_token.delete uri
     if resp.success?
-      puts "Deleted #{uri} (#{index+1} of #{count})"
+      puts "Deleted #{uri} (#{index + 1} of #{count})"
     elsif resp.status == 404
-      puts "Skipped #{uri} (#{index+1} of #{count})"
+      puts "Skipped #{uri} (#{index + 1} of #{count})"
     else
       raise "Error deleting #{uri}: #{resp.status}"
     end
+  end
+
+  def copy_resource(source_uri, index, count)
+    source_resource_body = get_resource(source_uri)
+    source_id = JSON.parse(source_resource_body)['id']
+    dest_uri = "#{options[:api_url]}/resource/#{source_id}"
+
+    dest_resource = source_resource_body.gsub(source_uri, dest_uri)
+
+    resp = connection_with_token.post(dest_uri, dest_resource)
+    raise "Error copying #{source_uri} to #{dest_uri}: #{resp.status}" unless resp.success?
+
+    puts "Copied #{source_uri} to #{dest_uri} (#{index + 1} of #{count})"
+  end
+
+  def get_resource(uri)
+    resp = connection.get(uri)
+    raise "Error getting #{uri}: #{resp.status}" unless resp.success?
+
+    resp.body
+  end
+
+  def token
+    @token ||= options[:token] || File.read('.cognitoToken')
   end
 end
