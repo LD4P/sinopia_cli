@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
-require 'thor'
 require 'client'
+require 'json'
+require 'thor'
 
 # Methods for resource endpoint
 class Resource < Thor

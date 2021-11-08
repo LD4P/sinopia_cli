@@ -2,7 +2,6 @@
 
 require 'thor'
 require 'resource'
-require 'json'
 
 # Base of the CLI
 class SinopiaCli < Thor
