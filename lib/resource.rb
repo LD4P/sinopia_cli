@@ -43,12 +43,16 @@ class Resource < Thor
   option :uri, type: :array, desc: 'Space separated list of source URIs.'
   option :file, type: :string, desc: 'File containing list of source URIs.'
   option :token, type: :string, desc: 'JWT token. Otherwise, read from .cognitoToken'
+  option :overwrite, type: :boolean, default: false, desc: 'Overwrite resource if it already exists'
   desc 'copy', 'copy resources from one Sinopia environment to another'
   def copy
-    raise 'Must provide a URI or file' unless options.key?(:uri) || options.key?(:file)
-
-    source_uris = options.key?(:uri) ? options[:uri] : File.readlines(options[:file], chomp: true)
-    source_uris.each_with_index { |source_uri, index| copy_resource(source_uri, index, source_uris.size) }
+    source_uris = source_uris_from_options(options)
+    source_uris.each.with_index(1) do |source_uri, index|
+      dest_uri = copy_resource(source_uri, overwrite: options[:overwrite])
+      puts "Copied #{source_uri} to #{dest_uri} (#{index} of #{source_uris.count})"
+    rescue RuntimeError => e
+      puts "Error copying #{source_uri}: #{e}"
+    end
   end
 
   private
@@ -73,7 +77,7 @@ class Resource < Thor
   def put_page(resp_json, uri_only)
     resp_json['data'].each do |resource|
       if uri_only
-        puts "#{resource['uri']}: (#{index(+1)} of #{count})"
+        puts resource['uri']
       else
         puts JSON.pretty_generate(resource)
       end
@@ -91,17 +95,25 @@ class Resource < Thor
     end
   end
 
-  def copy_resource(source_uri, index, count)
+  def copy_resource(source_uri, overwrite: false)
     source_resource_body = get_resource(source_uri)
     source_id = JSON.parse(source_resource_body)['id']
     dest_uri = "#{options[:api_url]}/resource/#{source_id}"
 
     dest_resource = source_resource_body.gsub(source_uri, dest_uri)
 
-    resp = connection_with_token.post(dest_uri, dest_resource)
-    raise "Error copying #{source_uri} to #{dest_uri}: #{resp.status}" unless resp.success?
+    http_method = resource_exists?(dest_uri) && overwrite ? :put : :post
+    resp = connection_with_token.public_send(http_method, dest_uri, dest_resource)
 
-    puts "Copied #{source_uri} to #{dest_uri} (#{index + 1} of #{count})"
+    raise "Error copying #{source_uri} to #{dest_uri}: (#{resp.status}) #{resp.body}" unless resp.success?
+
+    dest_uri
+  end
+
+  def source_uris_from_options(options)
+    raise 'Must provide a URI or file' unless options.key?(:uri) || options.key?(:file)
+
+    options.key?(:uri) ? options[:uri] : File.readlines(options[:file], chomp: true)
   end
 
   def get_resource(uri)
@@ -109,6 +121,10 @@ class Resource < Thor
     raise "Error getting #{uri}: #{resp.status}" unless resp.success?
 
     resp.body
+  end
+
+  def resource_exists?(uri)
+    connection.get(uri).success?
   end
 
   def token
