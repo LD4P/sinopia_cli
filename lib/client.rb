@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require 'thor'
 require 'faraday'
 
 # Client for Sinopia API

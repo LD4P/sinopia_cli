@@ -70,11 +70,12 @@ Usage:
   sinopia-cli resource copy
 
 Options:
-  [--uri=one two three]  # Space separated list of source URIs.
-  [--file=FILE]          # File containing list of source URIs.
-  [--token=TOKEN]        # JWT token. Otherwise, read from .cognitoToken
+  [--uri=one two three]            # Space separated list of source URIs.
+  [--file=FILE]                    # File containing list of source URIs.
+  [--token=TOKEN]                  # JWT token. Otherwise, read from .cognitoToken
+  [--overwrite], [--no-overwrite]  # Overwrite resource if it already exists
   [--api-url=API_URL]
-                         # Default: https://api.stage.sinopia.io
+                                   # Default: https://api.stage.sinopia.io
 
 copy resources from one Sinopia environment to another
 ```
