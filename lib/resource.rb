@@ -9,6 +9,7 @@ class Resource < Thor
   class_option :api_url, type: :string, default: 'https://api.stage.sinopia.io'
 
   option :uri_only, type: :boolean, desc: 'Print resource URIs only.'
+  option :files, type: :boolean, desc: 'Write to files.'
   option :templates_only, type: :boolean, desc: 'Resource templates only.'
   option :group, type: :string, desc: 'Group name filter.'
   option :updated_before, type: :string,
@@ -16,6 +17,7 @@ class Resource < Thor
   option :updated_after, type: :string, desc: 'Resource last updated after filter, e.g., 2019-11-08T17:40:23.363Z'
   option :type, type: :string, desc: 'Class filter, e.g., http://id.loc.gov/ontologies/bibframe/AbbreviatedTitle'
   desc 'list', 'list resources'
+  # rubocop:disable Metrics/AbcSize
   def list
     url = "#{options[:api_url]}/resource"
     while url
@@ -25,9 +27,10 @@ class Resource < Thor
         'updatedAfter' => options[:updated_after],
         'type' => options[:templates_only] ? 'http://sinopia.io/vocabulary/ResourceTemplate' : options[:type]
       }.compact
-      url = list_page(url, options[:uri_only], params)
+      url = list_page(url, options[:uri_only], options[:files], params)
     end
   end
+  # rubocop:enable Metrics/AbcSize
 
   option :uri, type: :array, desc: 'Space separated list of URIs.'
   option :file, type: :string, desc: 'File containing list of URIs.'
@@ -65,23 +68,29 @@ class Resource < Thor
     @connection_with_token ||= Client.connection(token: token)
   end
 
-  def list_page(url, uri_only, params = {})
+  def list_page(url, uri_only, files, params = {})
     resp = connection.get url, params
     raise "Error getting #{url}." unless resp.success?
 
     resp_json = JSON.parse(resp.body)
-    put_page(resp_json, uri_only)
+    put_page(resp_json, uri_only, files)
     resp_json.dig('links', 'next')
   end
 
-  def put_page(resp_json, uri_only)
+  def put_page(resp_json, uri_only, files)
     resp_json['data'].each do |resource|
       if uri_only
         puts resource['uri']
       else
         puts JSON.pretty_generate(resource)
       end
+      put_file(resource) if files
     end
+  end
+
+  def put_file(resource)
+    Dir.mkdir('output') unless File.exist?('output')
+    File.write("output/#{resource['id']}.json", JSON.pretty_generate(resource))
   end
 
   def delete_resource(uri, index, count)

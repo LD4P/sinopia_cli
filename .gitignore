@@ -2,3 +2,4 @@
 .ruby-version
 .cognitoToken
 *.txt
+output/
